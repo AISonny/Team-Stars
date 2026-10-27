@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Windows 11 健康休息提醒工具 - 完整系統流程圖</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- 引入 Mermaid.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f293d;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 24px;
+      height: 24px;
+      background: #2563eb;
+      border-radius: 6px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2px;
+      padding: 4px;
+    }
+
+    .brand-logo div {
+      background: #ffffff;
+      border-radius: 1px;
+    }
+
+    .brand h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .nav-tabs {
+      display: flex;
+      background: rgba(9, 13, 22, 0.8);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .nav-btn {
+      background: transparent;
+      color: var(--muted);
+      border: none;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .nav-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .chart-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      display: none;
+      flex-direction: column;
+      gap: 1.25rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    .chart-container.active {
+      display: flex;
+    }
+
+    .chart-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+
+    .chart-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .chart-header p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .mermaid-wrapper {
+      background: #0d131f;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: auto;
+      min-height: 480px;
+    }
+
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .code-view {
+      margin-top: 1rem;
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .code-view.active {
+      display: block;
+    }
+
+    .code-view-header {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-view pre {
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #e5e7eb;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      background: rgba(17, 24, 39, 0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">
+        <div></div><div></div><div></div><div></div>
+      </div>
+      <h1>Windows 11 健康休息提醒 · 流程圖架構中心</h1>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-btn active" onclick="switchChart(0)">圖一：核心計時與閒置判定</button>
+      <button class="nav-btn" onclick="switchChart(1)">圖二：11種狀態機轉移圖</button>
+      <button class="nav-btn" onclick="switchChart(2)">圖三：45分提醒與按鈕處置</button>
+      <button class="nav-btn" onclick="switchChart(3)">圖四：Win11系統事件時序圖</button>
+    </nav>
+
+    <div class="actions">
+      <button class="btn-action" onclick="toggleSourceCode()">檢視 / 隱藏 Mermaid 原始碼</button>
+      <button class="btn-action" onclick="window.print()">列印 / 匯出 PDF</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- 圖一：核心計時與閒置判定流程圖 -->
+    <section class="chart-container active" id="chart-0">
+      <div class="chart-header">
+        <h2>圖一：核心計時引擎與三段式閒置判定流程圖 (Flowchart)</h2>
+        <p>涵蓋 GetLastInputInfo 實體活動檢驗、短暫閒置（看手機 3 分鐘容錯）、一般閒置（5~15 分鐘）與長時間閒置（>15 分鐘）之累計與凍結機制。</p>
+      </div>
+
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+flowchart TD
+    Start([每秒定時輪詢 Tick / 輸入事件]) --> CheckSys{檢查 Windows 系統狀態}
+    
+    CheckSys -- 螢幕已鎖定 (Win+L) --> StateLocked[進入 LOCKED 狀態<br/>累積秒數完全凍結]
+    CheckSys -- 系統已進入睡眠 (Sleep) --> StateSuspended[進入 SUSPENDED 狀態<br/>時鐘停止，零累計]
+    CheckSys -- 使用者已手動暫停 --> StatePaused[進入 PAUSED 狀態<br/>暫停累計]
+    CheckSys -- 正常使用中 --> ReadInput[呼叫 GetLastInputInfo 取得最後輸入時間]
+
+    ReadInput --> CalcIdle[計算閒置時間：<br/>Idle = time.monotonic - LastInputTime]
+    
+    CalcIdle --> CheckInput{最近 2 秒內<br/>是否有鍵盤/滑鼠輸入?}
+
+    CheckInput -- 是 (持續操作) --> Accumulate[累計有效時間：<br/>CycleTime += Delta<br/>TodayTime += Delta]
+    CheckInput -- 否 (未操作) --> ClassifyIdle{判定閒置區間}
+
+    Accumulate --> CheckTarget{本輪累計是否<br/>達到 45 分鐘?}
+    CheckTarget -- 未達到 --> WaitNext[等待下一次 Tick]
+    CheckTarget -- 已達到 45 分鐘 --> TriggerBreak[觸發健康休息提醒<br/>發出單一 ID 提醒事件<br/>狀態轉為 BREAK_DUE]
+
+    ClassifyIdle -- "0 ~ 5 分鐘<br/>(如查看手機 3 分鐘)" --> ShortIdle[短暫閒置 SHORT_IDLE<br/>★ 容錯機制：保留原有進度<br/>★ 閒置期間不增加秒數]
+    ClassifyIdle -- "5 ~ 15 分鐘" --> Inactive[一般閒置 INACTIVE<br/>暫停累計，保留進度]
+    ClassifyIdle -- "超過 15 分鐘" --> LongIdle[長時間閒置 LONG_IDLE<br/>暫停累計，記錄事件至 SQLite]
+
+    ShortIdle --> WaitUserReturn{使用者重新<br/>操作電腦?}
+    Inactive --> WaitUserReturn
+    LongIdle --> WaitUserReturn
+
+    WaitUserReturn -- 是 --> ResumeActive[重新錨定 LastInputTime<br/>無縫接續原有累計進度<br/>轉回 ACTIVE 狀態]
+    WaitUserReturn -- 否 --> WaitNext
+        </div>
+      </div>
+
+      <div class="code-view" id="code-0">
+        <div class="code-view-header">
+          <span>Mermaid Code (圖一)</span>
+          <button class="btn-action" onclick="copyCode('code-text-0')">複製原始碼</button>
+        </div>
+        <pre><code id="code-text-0">flowchart TD
+    Start([每秒定時輪詢 Tick / 輸入事件]) --> CheckSys{檢查 Windows 系統狀態}
+    
+    CheckSys -- 螢幕已鎖定 (Win+L) --> StateLocked[進入 LOCKED 狀態<br/>累積秒數完全凍結]
+    CheckSys -- 系統已進入睡眠 (Sleep) --> StateSuspended[進入 SUSPENDED 狀態<br/>時鐘停止，零累計]
+    CheckSys -- 使用者已手動暫停 --> StatePaused[進入 PAUSED 狀態<br/>暫停累計]
+    CheckSys -- 正常使用中 --> ReadInput[呼叫 GetLastInputInfo 取得最後輸入時間]
+
+    ReadInput --> CalcIdle[計算閒置時間：<br/>Idle = time.monotonic - LastInputTime]
+    
+    CalcIdle --> CheckInput{最近 2 秒內<br/>是否有鍵盤/滑鼠輸入?}
+
+    CheckInput -- 是 (持續操作) --> Accumulate[累計有效時間：<br/>CycleTime += Delta<br/>TodayTime += Delta]
+    CheckInput -- 否 (未操作) --> ClassifyIdle{判定閒置區間}
+
+    Accumulate --> CheckTarget{本輪累計是否<br/>達到 45 分鐘?}
+    CheckTarget -- 未達到 --> WaitNext[等待下一次 Tick]
+    CheckTarget -- 已達到 45 分鐘 --> TriggerBreak[觸發健康休息提醒<br/>發出單一 ID 提醒事件<br/>狀態轉為 BREAK_DUE]
+
+    ClassifyIdle -- "0 ~ 5 分鐘<br/>(如查看手機 3 分鐘)" --> ShortIdle[短暫閒置 SHORT_IDLE<br/>★ 容錯機制：保留原有進度<br/>★ 閒置期間不增加秒數]
+    ClassifyIdle -- "5 ~ 15 分鐘" --> Inactive[一般閒置 INACTIVE<br/>暫停累計，保留進度]
+    ClassifyIdle -- "超過 15 分鐘" --> LongIdle[長時間閒置 LONG_IDLE<br/>暫停累計，記錄事件至 SQLite]
+
+    ShortIdle --> WaitUserReturn{使用者重新<br/>操作電腦?}
+    Inactive --> WaitUserReturn
+    LongIdle --> WaitUserReturn
+
+    WaitUserReturn -- 是 --> ResumeActive[重新錨定 LastInputTime<br/>無縫接續原有累計進度<br/>轉回 ACTIVE 狀態]
+    WaitUserReturn -- 否 --> WaitNext</code></pre>
+      </div>
+    </section>
+
+    <!-- 圖二：11種狀態機轉移圖 -->
+    <section class="chart-container" id="chart-1">
+      <div class="chart-header">
+        <h2>圖二：11 種核心狀態機轉移圖 (State Diagram)</h2>
+        <p>呈現 ACTIVE、SHORT_IDLE、INACTIVE、LONG_IDLE、BREAK_DUE、BREAK_PAUSED、PAUSED、LOCKED、SUSPENDED、RESUMING 與 STOPPED 之生命週期。</p>
+      </div>
+
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+stateDiagram-v2
+    [*] --> ACTIVE : 程式啟動 / 載入今日進度
+
+    ACTIVE --> SHORT_IDLE : 無輸入超過 2 秒 (如看手機)
+    SHORT_IDLE --> ACTIVE : 重新偵測到活動 (接續原進度)
+    
+    SHORT_IDLE --> INACTIVE : 閒置達到 5 分鐘門檻
+    INACTIVE --> ACTIVE : 重新操作 (接續進度，閒置不計)
+    
+    INACTIVE --> LONG_IDLE : 閒置達到 15 分鐘門檻
+    LONG_IDLE --> ACTIVE : 重新操作 (寫入閒置事件並接續)
+
+    ACTIVE --> BREAK_DUE : 本輪累計達 45 分鐘
+    
+    state BREAK_DUE {
+        [*] --> 彈出視窗與系統通知
+    }
+
+    BREAK_DUE --> ACTIVE : 點擊「已完成休息」(進度歸零)
+    BREAK_DUE --> SHORT_IDLE : 點擊「稍後 5 分鐘提醒」(延後排程)
+    BREAK_DUE --> BREAK_PAUSED : 點擊「我正在休息」(保留 45 分鐘)
+    BREAK_DUE --> PAUSED : 點擊「暫停提醒」
+    BREAK_DUE --> BREAK_DUE : 點擊「僅關閉視窗」(維持待處置)
+
+    BREAK_PAUSED --> ACTIVE : 點擊「結束休息，接續工作」
+
+    ACTIVE --> PAUSED : 手動點擊「暫停計時」
+    PAUSED --> ACTIVE : 手動點擊「恢復計時」
+
+    ACTIVE --> LOCKED : Windows 工作階段鎖定 (Win+L)
+    SHORT_IDLE --> LOCKED : 鎖定
+    INACTIVE --> LOCKED : 鎖定
+    LOCKED --> RESUMING : 使用者登入解鎖
+    RESUMING --> ACTIVE : 確認實體輸入，重新計時
+
+    ACTIVE --> SUSPENDED : 系統進入睡眠 / 休眠
+    SUSPENDED --> RESUMING : 系統自睡眠喚醒
+    
+    ACTIVE --> STOPPED : 退出程式 (安全存檔)
+    STOPPED --> [*]
+        </div>
+      </div>
+
+      <div class="code-view" id="code-1">
+        <div class="code-view-header">
+          <span>Mermaid Code (圖二)</span>
+          <button class="btn-action" onclick="copyCode('code-text-1')">複製原始碼</button>
+        </div>
+        <pre><code id="code-text-1">stateDiagram-v2
+    [*] --> ACTIVE : 程式啟動 / 載入今日進度
+
+    ACTIVE --> SHORT_IDLE : 無輸入超過 2 秒 (如看手機)
+    SHORT_IDLE --> ACTIVE : 重新偵測到活動 (接續原進度)
+    
+    SHORT_IDLE --> INACTIVE : 閒置達到 5 分鐘門檻
+    INACTIVE --> ACTIVE : 重新操作 (接續進度，閒置不計)
+    
+    INACTIVE --> LONG_IDLE : 閒置達到 15 分鐘門檻
+    LONG_IDLE --> ACTIVE : 重新操作 (寫入閒置事件並接續)
+
+    ACTIVE --> BREAK_DUE : 本輪累計達 45 分鐘
+    
+    state BREAK_DUE {
+        [*] --> 彈出視窗與系統通知
+    }
+
+    BREAK_DUE --> ACTIVE : 點擊「已完成休息」(進度歸零)
+    BREAK_DUE --> SHORT_IDLE : 點擊「稍後 5 分鐘提醒」(延後排程)
+    BREAK_DUE --> BREAK_PAUSED : 點擊「我正在休息」(保留 45 分鐘)
+    BREAK_DUE --> PAUSED : 點擊「暫停提醒」
+    BREAK_DUE --> BREAK_DUE : 點擊「僅關閉視窗」(維持待處置)
+
+    BREAK_PAUSED --> ACTIVE : 點擊「結束休息，接續工作」
+
+    ACTIVE --> PAUSED : 手動點擊「暫停計時」
+    PAUSED --> ACTIVE : 手動點擊「恢復計時」
+
+    ACTIVE --> LOCKED : Windows 工作階段鎖定 (Win+L)
+    SHORT_IDLE --> LOCKED : 鎖定
+    INACTIVE --> LOCKED : 鎖定
+    LOCKED --> RESUMING : 使用者登入解鎖
+    RESUMING --> ACTIVE : 確認實體輸入，重新計時
+
+    ACTIVE --> SUSPENDED : 系統進入睡眠 / 休眠
+    SUSPENDED --> RESUMING : 系統自睡眠喚醒
+    
+    ACTIVE --> STOPPED : 退出程式 (安全存檔)
+    STOPPED --> [*]</code></pre>
+      </div>
+    </section>
+
+    <!-- 圖三：45分鐘提醒與按鈕處置流程圖 -->
+    <section class="chart-container" id="chart-2">
+      <div class="chart-header">
+        <h2>圖三：45 分鐘健康提醒觸發與 5 大處置按鈕流程圖 (Flowchart)</h2>
+        <p>呈現唯一提醒 ID 生成、Toast 通知與桌面彈窗觸發，以及五大按鈕各自對計時週期、延後排程與暫停的處置邏輯。</p>
+      </div>
+
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+flowchart TD
+    Due[本輪有效活動達 45 分鐘] --> LockEngine[計時引擎鎖定累計<br/>狀態轉為 BREAK_DUE]
+    LockEngine --> GenID[產生唯一提醒 ID：break-uuid]
+    
+    GenID --> NoticeService[發送 Windows 11 Toast 系統橫幅通知]
+    GenID --> PopWindow[顯示現代化桌面彈出視窗<br/>提供喝水、肩頸伸展引導]
+
+    PopWindow --> UserChoice{使用者點選處置按鈕}
+
+    UserChoice -- 按鈕 1：我已完成健康休息 --> ActionComplete[1. 本輪累計歸零 (00:00:00)<br/>2. 今日完成休息次數 +1<br/>3. 開啟新一輪 45 分鐘計時<br/>4. 關閉彈窗]
+    
+    UserChoice -- 按鈕 2：稍後 5 分鐘提醒 --> ActionSnooze[1. 設定延後時限 (Now + 300s)<br/>2. 延後期間維持閒置不累計<br/>3. 關閉彈窗，到期後再次提醒]
+
+    UserChoice -- 按鈕 3：我正在休息中 --> ActionResting[1. 狀態切換為 BREAK_PAUSED<br/>2. 完整保留 45 分鐘進度<br/>3. 主介面顯示「休息中」<br/>4. 等待使用者按下「結束休息」]
+
+    UserChoice -- 按鈕 4：僅關閉視窗 --> ActionDismiss[1. 僅隱藏當前對話框<br/>2. 維持 BREAK_DUE 狀態<br/>3. 不默認完成休息，保留待處理]
+
+    UserChoice -- 按鈕 5：暫停提醒 --> ActionPause[1. 狀態切換為 PAUSED<br/>2. 凍結後續計時與彈窗<br/>3. 需使用者手動點擊「恢復計時」]
+
+    ActionComplete --> NextCycle([開始新週期 ACTIVE])
+    ActionSnooze --> WaitSnooze([等待 5 分鐘倒數])
+    ActionResting --> WaitUserEnd([等待點擊「結束休息」])
+    ActionDismiss --> StayPending([隨時可由系統匣重新喚出])
+    ActionPause --> ManualPaused([維持暫停狀態])
+        </div>
+      </div>
+
+      <div class="code-view" id="code-2">
+        <div class="code-view-header">
+          <span>Mermaid Code (圖三)</span>
+          <button class="btn-action" onclick="copyCode('code-text-2')">複製原始碼</button>
+        </div>
+        <pre><code id="code-text-2">flowchart TD
+    Due[本輪有效活動達 45 分鐘] --> LockEngine[計時引擎鎖定累計<br/>狀態轉為 BREAK_DUE]
+    LockEngine --> GenID[產生唯一提醒 ID：break-uuid]
+    
+    GenID --> NoticeService[發送 Windows 11 Toast 系統橫幅通知]
+    GenID --> PopWindow[顯示現代化桌面彈出視窗<br/>提供喝水、肩頸伸展引導]
+
+    PopWindow --> UserChoice{使用者點選處置按鈕}
+
+    UserChoice -- 按鈕 1：我已完成健康休息 --> ActionComplete[1. 本輪累計歸零 (00:00:00)<br/>2. 今日完成休息次數 +1<br/>3. 開啟新一輪 45 分鐘計時<br/>4. 關閉彈窗]
+    
+    UserChoice -- 按鈕 2：稍後 5 分鐘提醒 --> ActionSnooze[1. 設定延後時限 (Now + 300s)<br/>2. 延後期間維持閒置不累計<br/>3. 關閉彈窗，到期後再次提醒]
+
+    UserChoice -- 按鈕 3：我正在休息中 --> ActionResting[1. 狀態切換為 BREAK_PAUSED<br/>2. 完整保留 45 分鐘進度<br/>3. 主介面顯示「休息中」<br/>4. 等待使用者按下「結束休息」]
+
+    UserChoice -- 按鈕 4：僅關閉視窗 --> ActionDismiss[1. 僅隱藏當前對話框<br/>2. 維持 BREAK_DUE 狀態<br/>3. 不默認完成休息，保留待處理]
+
+    UserChoice -- 按鈕 5：暫停提醒 --> ActionPause[1. 狀態切換為 PAUSED<br/>2. 凍結後續計時與彈窗<br/>3. 需使用者手動點擊「恢復計時」]
+
+    ActionComplete --> NextCycle([開始新週期 ACTIVE])
+    ActionSnooze --> WaitSnooze([等待 5 分鐘倒數])
+    ActionResting --> WaitUserEnd([等待點擊「結束休息」])
+    ActionDismiss --> StayPending([隨時可由系統匣重新喚出])
+    ActionPause --> ManualPaused([維持暫停狀態])</code></pre>
+      </div>
+    </section>
+
+    <!-- 圖四：Win11系統事件時序圖 -->
+    <section class="chart-container" id="chart-3">
+      <div class="chart-header">
+        <h2>圖四：Windows 11 底層系統事件交互時序圖 (Sequence Diagram)</h2>
+        <p>呈現 Windows API、輸入活動監控執行緒、系統訊息監聽視窗、單調計時核心與 PySide6 UI 的非同步協同流程。</p>
+      </div>
+
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 使用者
+    participant OS as Windows 11 OS / API
+    participant AM as ActivityMonitor (輸入監控)
+    participant SE as SystemEventListener (訊息視窗)
+    participant Engine as TimerEngine (單調計時核心)
+    participant UI as PySide6 桌面主視窗 / 系統匣
+
+    Note over User, Engine: 正常工作階段
+    User->>OS: 滑鼠移動 / 鍵盤打字
+    loop 每秒輪詢
+        AM->>OS: GetLastInputInfo()
+        OS-->>AM: 回傳最後輸入毫秒 (dwTime)
+        AM->>Engine: report_activity() (連續活動累計時間)
+    end
+    Engine->>UI: 更新主視窗時間 (如 20:00:00)
+
+    Note over User, Engine: 短暫看手機 (3 分鐘容錯情境)
+    User-->>OS: 停止輸入 3 分鐘 (看手機)
+    loop 每秒輪詢 Tick
+        AM->>OS: GetLastInputInfo() (無新輸入)
+        Engine->>Engine: 偵測閒置 > 2s ➔ 轉為 SHORT_IDLE<br/>(停止累計，進度維持 20 分鐘)
+    end
+    User->>OS: 拿起滑鼠繼續工作
+    AM->>Engine: report_activity()
+    Engine->>Engine: 重新錨定基準點，無縫接續 20 分鐘進度
+
+    Note over User, Engine: 鎖定螢幕 (Win+L)
+    User->>OS: 按下 Win + L 鎖定
+    OS->>SE: 發送 WM_WTSSESSION_CHANGE (WTS_SESSION_LOCK)
+    SE->>Engine: on_session_locked()
+    Engine->>Engine: 轉為 LOCKED 狀態，凍結計時
+
+    User->>OS: 輸入密碼解鎖
+    OS->>SE: 發送 WM_WTSSESSION_CHANGE (WTS_SESSION_UNLOCK)
+    SE->>Engine: on_session_unlocked()
+    Engine->>Engine: 轉為 RESUMING，校準 time.monotonic()
+
+    Note over User, Engine: 滿 45 分鐘觸發提醒
+    Engine->>Engine: 累計達 2700 秒 ➔ BREAK_DUE
+    par 通知與彈窗
+        Engine->>OS: 發送 Windows 11 Toast 通知
+        Engine->>UI: 彈出 BreakDialog (5個按鈕)
+    end
+    User->>UI: 點選「已完成健康休息」
+    UI->>Engine: action_break_completed() (本輪歸零，開始新輪)
+        </div>
+      </div>
+
+      <div class="code-view" id="code-3">
+        <div class="code-view-header">
+          <span>Mermaid Code (圖四)</span>
+          <button class="btn-action" onclick="copyCode('code-text-3')">複製原始碼</button>
+        </div>
+        <pre><code id="code-text-3">sequenceDiagram
+    autonumber
+    actor User as 使用者
+    participant OS as Windows 11 OS / API
+    participant AM as ActivityMonitor (輸入監控)
+    participant SE as SystemEventListener (訊息視窗)
+    participant Engine as TimerEngine (單調計時核心)
+    participant UI as PySide6 桌面主視窗 / 系統匣
+
+    Note over User, Engine: 正常工作階段
+    User->>OS: 滑鼠移動 / 鍵盤打字
+    loop 每秒輪詢
+        AM->>OS: GetLastInputInfo()
+        OS-->>AM: 回傳最後輸入毫秒 (dwTime)
+        AM->>Engine: report_activity() (連續活動累計時間)
+    end
+    Engine->>UI: 更新主視窗時間 (如 20:00:00)
+
+    Note over User, Engine: 短暫看手機 (3 分鐘容錯情境)
+    User-->>OS: 停止輸入 3 分鐘 (看手機)
+    loop 每秒輪詢 Tick
+        AM->>OS: GetLastInputInfo() (無新輸入)
+        Engine->>Engine: 偵測閒置 > 2s ➔ 轉為 SHORT_IDLE<br/>(停止累計，進度維持 20 分鐘)
+    end
+    User->>OS: 拿起滑鼠繼續工作
+    AM->>Engine: report_activity()
+    Engine->>Engine: 重新錨定基準點，無縫接續 20 分鐘進度
+
+    Note over User, Engine: 鎖定螢幕 (Win+L)
+    User->>OS: 按下 Win + L 鎖定
+    OS->>SE: 發送 WM_WTSSESSION_CHANGE (WTS_SESSION_LOCK)
+    SE->>Engine: on_session_locked()
+    Engine->>Engine: 轉為 LOCKED 狀態，凍結計時
+
+    User->>OS: 輸入密碼解鎖
+    OS->>SE: 發送 WM_WTSSESSION_CHANGE (WTS_SESSION_UNLOCK)
+    SE->>Engine: on_session_unlocked()
+    Engine->>Engine: 轉為 RESUMING，校準 time.monotonic()
+
+    Note over User, Engine: 滿 45 分鐘觸發提醒
+    Engine->>Engine: 累計達 2700 秒 ➔ BREAK_DUE
+    par 通知與彈窗
+        Engine->>OS: 發送 Windows 11 Toast 通知
+        Engine->>UI: 彈出 BreakDialog (5個按鈕)
+    end
+    User->>UI: 點選「已完成健康休息」
+    UI->>Engine: action_break_completed() (本輪歸零，開始新輪)</code></pre>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Windows 11 電腦使用時間與健康休息提醒工具 · 規格流程圖與時序架構
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0d131f',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#3b82f6',
+        lineColor: '#60a5fa',
+        secondaryColor: '#1e293b',
+        tertiaryColor: '#0f172a'
+      },
+      flowchart: { curve: 'basis', nodeSpacing: 50, rankSpacing: 50 }
+    });
+
+    let currentTabIndex = 0;
+    let showSource = false;
+
+    function switchChart(index) {
+      currentTabIndex = index;
+      document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.chart-container').forEach((container, i) => {
+        container.classList.toggle('active', i === index);
+      });
+    }
+
+    function toggleSourceCode() {
+      showSource = !showSource;
+      document.querySelectorAll('.code-view').forEach((el) => {
+        el.classList.toggle('active', showSource);
+      });
+    }
+
+    function copyCode(elementId) {
+      const codeText = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(codeText).then(() => {
+        alert("已成功複製 Mermaid 原始碼！");
+      });
+    }
+  </script>
+</body>
+</html>

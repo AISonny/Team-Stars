@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windows 11 健康休息提醒工具 - diagram-design 旗艦架構與流程圖</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --surface: #111827;
+      --surface-elevated: #1a2234;
+      --border: #232f48;
+      --border-subtle: #192338;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --indigo: #818cf8;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", Menlo, monospace;
+    }
+
+    html.light {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-elevated: #f1f5f9;
+      --border: #cbd5e1;
+      --border-subtle: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+      --accent: #0284c7;
+      --accent-glow: rgba(2, 132, 199, 0.1);
+      --emerald: #059669;
+      --amber: #d97706;
+      --rose: #e11d48;
+      --indigo: #6366f1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Header Bar */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #03111e;
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: #7dd3fc;
+      color: #03111e;
+    }
+
+    /* Sub-nav Tab Bar */
+    .tab-nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 24px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+      background: var(--surface-elevated);
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      background: var(--surface-elevated);
+      border-color: var(--border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-btn .num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .tab-btn.active .num {
+      background: var(--accent);
+      color: #03111e;
+      font-weight: 700;
+    }
+
+    /* Toolbar for Zoom & Export */
+    .toolbar {
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(17, 24, 39, 0.4);
+    }
+
+    .diagram-info h2 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .diagram-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      border-radius: 5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .control-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    /* Diagram Stage & Canvas */
+    .viewport {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: auto;
+      background: 
+        radial-gradient(circle at 1px 1px, var(--border-subtle) 1px, transparent 0);
+      background-size: 24px 24px;
+      min-height: 640px;
+    }
+
+    .svg-wrapper {
+      transform-origin: center center;
+      transition: transform 0.15s ease-out;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+      padding: 24px;
+      max-width: 100%;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 1100px;
+    }
+
+    /* SVG Editorial Styles */
+    .hairline {
+      stroke-width: 1;
+    }
+    .grid-node {
+      transition: filter 0.2s ease;
+    }
+    .grid-node:hover {
+      filter: drop-shadow(0 0 8px var(--accent-glow));
+    }
+
+    /* Toast notification */
+    #copy-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface-elevated);
+      color: var(--emerald);
+      border: 1px solid var(--emerald);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      z-index: 100;
+    }
+  </style>
+<script src="/_aistudio-iframe.js?v=6634132a"></script></head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-badge">cathrynlavery/diagram-design</span>
+      <h1 class="brand-title">Windows 11 健康休息提醒工具 · 系統架構與流程圖</h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn" onclick="toggleTheme()" id="theme-btn">
+        <span id="theme-icon">☀️</span> 明亮模式
+      </button>
+      <button class="btn" onclick="copySvgCode()">
+        📋 複製 SVG 代碼
+      </button>
+      <button class="btn btn-primary" onclick="downloadCurrentSvg()">
+        ⬇ 匯出高品質 SVG
+      </button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" onclick="switchDiagram(0)">
+      <span class="num">01</span>
+      <span>全域系統架構圖 (System Architecture)</span>
+    </button>
+    <button class="tab-btn" onclick="switchDiagram(1)">
+      <span class="num">02</span>
+      <span>三段式閒置容錯狀態機 (11-State Machine)</span>
+    </button>
+    <button class="tab-btn" onclick="switchDiagram(2)">
+      <span class="num">03</span>
+      <span>45分鐘提醒與 5 大處置流程 (Decision Tree)</span>
+    </button>
+    <button class="tab-btn" onclick="switchDiagram(3)">
+      <span class="num">04</span>
+      <span>Windows 11 會話與電源生命週期 (Power Lifecycle)</span>
+    </button>
+  </nav>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="diagram-info">
+      <h2 id="diag-title">圖一：全域系統架構圖 (System Architecture)</h2>
+      <p id="diag-desc">依循 diagram-design 4px 網格與 1px 髮絲線規範，呈現硬體輸入、Win32 API、核心時鐘引擎、狀態機、通知與 SQLite 本機儲存階層。</p>
+    </div>
+    <div class="controls">
+      <button class="control-btn" onclick="zoomIn()">Zoom +</button>
+      <button class="control-btn" onclick="zoomReset()" id="zoom-level">100%</button>
+      <button class="control-btn" onclick="zoomOut()">Zoom −</button>
+    </div>
+  </div>
+
+  <!-- Viewport -->
+  <main class="viewport">
+    <div class="svg-wrapper" id="svg-wrapper">
+      <!-- Diagram Container -->
+      <div id="svg-container"></div>
+    </div>
+  </main>
+
+  <div id="copy-toast">✓ 已成功複製 SVG 代碼至剪貼簿！</div>
+
+  <script>
+    // 4 套符合 cathrynlavery/diagram-design 規範的 SVG 原始碼
+    // 嚴格遵循：4px 網格對齊、1px 髮絲線、單一主要重點色、Monospace 標記、WCAG AA 對比
+    const DIAGRAMS = [
+      {
+        title: "圖一：全域系統分層架構圖 (System Architecture)",
+        desc: "硬體輸入監聽、Windows 11 原生 API 橋接、單調時鐘核心、11 狀態機、雙重通知與本機原子持久化層。",
+        svg: `<svg viewBox="0 0 1060 620" width="1060" height="620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 11 健康休息提醒系統架構圖">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <!-- LAYER 1: HARDWARE & OS LAYER -->
+  <g class="grid-node">
+    <rect x="30" y="30" width="220" height="560" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1" />
+    <rect x="30" y="30" width="220" height="36" rx="8" fill="#1e293b" />
+    <text x="44" y="53" fill="#94a3b8" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1">LAYER 01 : OS &amp; HARDWARE</text>
+    
+    <!-- Keyboard & Mouse Input -->
+    <rect x="46" y="80" width="188" height="90" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="58" y="104" fill="#f8fafc" font-size="13" font-weight="600">鍵盤與滑鼠實體操作</text>
+    <text x="58" y="122" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">USER PHYSICAL I/O</text>
+    <rect x="58" y="134" width="70" height="20" rx="3" fill="#1e293b"/>
+    <text x="64" y="148" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="10">0 隱私側錄</text>
+
+    <!-- Win32 GetLastInputInfo -->
+    <rect x="46" y="190" width="188" height="100" rx="6" fill="#0b1120" stroke="#0284c7" stroke-width="1.2"/>
+    <text x="58" y="214" fill="#38bdf8" font-size="13" font-weight="700">Win32 輸入活動監聽</text>
+    <text x="58" y="232" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">GetLastInputInfo()</text>
+    <text x="58" y="250" fill="#94a3b8" font-size="11">GetTickCount64 溢位防護</text>
+    <rect x="58" y="260" width="130" height="18" rx="3" fill="#0369a1" fill-opacity="0.2"/>
+    <text x="64" y="273" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="10">POLL: 1000ms / Tick</text>
+
+    <!-- Win32 Session & Power Events -->
+    <rect x="46" y="310" width="188" height="110" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="58" y="334" fill="#f8fafc" font-size="13" font-weight="600">系統工作階段與電源</text>
+    <text x="58" y="352" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">WM_WTSSESSION_CHANGE</text>
+    <text x="58" y="370" fill="#94a3b8" font-size="11">鎖定 Win+L / 解鎖</text>
+    <text x="58" y="388" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">WM_POWERBROADCAST</text>
+    <text x="58" y="404" fill="#94a3b8" font-size="11">睡眠 Sleep / 喚醒 Resume</text>
+
+    <!-- Named Mutex -->
+    <rect x="46" y="440" width="188" height="70" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="58" y="464" fill="#f8fafc" font-size="13" font-weight="600">單一執行個體鎖</text>
+    <text x="58" y="482" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">CreateMutexW</text>
+    <text x="58" y="498" fill="#94a3b8" font-size="11">防重複啟動 (Named Mutex)</text>
+
+    <!-- HKCU AutoStart -->
+    <rect x="46" y="525" width="188" height="50" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="58" y="546" fill="#f8fafc" font-size="12" font-weight="600">開機自啟動管理</text>
+    <text x="58" y="562" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">HKCU\...\Run</text>
+  </g>
+
+  <!-- LAYER 2: CORE TIMING ENGINE & STATE MACHINE -->
+  <g class="grid-node">
+    <rect x="290" y="30" width="370" height="560" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1" />
+    <rect x="290" y="30" width="370" height="36" rx="8" fill="#1e293b" />
+    <text x="306" y="53" fill="#38bdf8" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1">LAYER 02 : CORE TIMING ENGINE &amp; 11-STATE MACHINE</text>
+
+    <!-- Monotonic Clock -->
+    <rect x="306" y="80" width="338" height="75" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="320" y="104" fill="#f8fafc" font-size="13" font-weight="600">獨立單調時鐘 (Monotonic Clock)</text>
+    <text x="320" y="122" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">time.monotonic() · 免疫系統時間修改</text>
+    <text x="320" y="140" fill="#94a3b8" font-size="11">防篡改精度累加，支援單元測試 MockClock 注入</text>
+
+    <!-- 3-Tier Idle Tolerance Filter -->
+    <rect x="306" y="170" width="338" height="150" rx="6" fill="#0b1120" stroke="#0ea5e9" stroke-width="1.2"/>
+    <text x="320" y="194" fill="#38bdf8" font-size="13" font-weight="700">三段式閒置容錯仲裁器 (3-Tier Idle Arbiter)</text>
+    
+    <!-- Burst Window -->
+    <rect x="320" y="206" width="310" height="26" rx="4" fill="#1e293b"/>
+    <text x="328" y="223" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">Burst Window ≤ 2.0s</text>
+    <text x="490" y="223" fill="#94a3b8" font-size="11">有輸入時逐秒累計有效秒數</text>
+
+    <!-- Short Idle -->
+    <rect x="320" y="238" width="310" height="32" rx="4" fill="#1e293b"/>
+    <text x="328" y="253" fill="#f59e0b" font-family="JetBrains Mono, monospace" font-size="10">短暫閒置 (0~5m)</text>
+    <text x="445" y="253" fill="#f8fafc" font-size="11">看手機容錯：進度完全保留，零增加</text>
+    <text x="328" y="266" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">PRESERVE_ACCUMULATED_PROGRESS_WITHOUT_IDLE_SECONDS</text>
+
+    <!-- Inactive & Long Idle -->
+    <rect x="320" y="276" width="310" height="32" rx="4" fill="#1e293b"/>
+    <text x="328" y="291" fill="#f43f5e" font-family="JetBrains Mono, monospace" font-size="10">一般與長時間閒置</text>
+    <text x="445" y="291" fill="#94a3b8" font-size="11">5~15m 凍結保留 / &gt;15m 寫入事件紀錄</text>
+    <text x="328" y="303" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">EVENT_LOGGING_TO_SQLITE_HISTORY</text>
+
+    <!-- 11 State Engine -->
+    <rect x="306" y="335" width="338" height="150" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="320" y="358" fill="#f8fafc" font-size="13" font-weight="600">11 種核心狀態機 (Finite State Machine)</text>
+    
+    <g transform="translate(320, 370)">
+      <rect x="0" y="0" width="70" height="24" rx="4" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+      <text x="14" y="16" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">ACTIVE</text>
+
+      <rect x="76" y="0" width="85" height="24" rx="4" fill="#451a03" stroke="#f59e0b" stroke-width="1"/>
+      <text x="82" y="16" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="9">SHORT_IDLE</text>
+
+      <rect x="167" y="0" width="70" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="175" y="16" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="9">INACTIVE</text>
+
+      <rect x="243" y="0" width="67" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="248" y="16" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="9">LONG_IDLE</text>
+    </g>
+
+    <g transform="translate(320, 400)">
+      <rect x="0" y="0" width="85" height="24" rx="4" fill="#881337" stroke="#f43f5e" stroke-width="1"/>
+      <text x="8" y="16" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="10">BREAK_DUE</text>
+
+      <rect x="91" y="0" width="95" height="24" rx="4" fill="#1e1b4b" stroke="#818cf8" stroke-width="1"/>
+      <text x="96" y="16" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="9">BREAK_PAUSED</text>
+
+      <rect x="192" y="0" width="55" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="199" y="16" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="9">PAUSED</text>
+
+      <rect x="253" y="0" width="57" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="261" y="16" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="9">LOCKED</text>
+    </g>
+
+    <g transform="translate(320, 430)">
+      <rect x="0" y="0" width="85" height="22" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="10" y="15" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="9">SUSPENDED</text>
+
+      <rect x="91" y="0" width="70" height="22" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="100" y="15" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="9">RESUMING</text>
+
+      <rect x="167" y="0" width="65" height="22" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+      <text x="178" y="15" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="9">STOPPED</text>
+    </g>
+    <text x="320" y="475" fill="#64748b" font-size="11">狀態變更觸發回呼、UI 儀表板與系統匣即時同步</text>
+
+    <!-- Goal Evaluation -->
+    <rect x="306" y="500" width="338" height="75" rx="6" fill="#0b1120" stroke="#f43f5e" stroke-width="1.2"/>
+    <text x="320" y="522" fill="#f8fafc" font-size="13" font-weight="600">45 分鐘達標判定 (Break Evaluation)</text>
+    <text x="320" y="540" fill="#f43f5e" font-family="JetBrains Mono, monospace" font-size="10">IF (cycle_active_seconds &gt;= 2700s) -&gt; TRIGGER</text>
+    <text x="320" y="558" fill="#94a3b8" font-size="11">凍結累計、產生 UUID 單一事件標記，發送通知</text>
+  </g>
+
+  <!-- LAYER 3: NOTIFICATION & UI LAYER -->
+  <g class="grid-node">
+    <rect x="700" y="30" width="330" height="280" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1" />
+    <rect x="700" y="30" width="330" height="36" rx="8" fill="#1e293b" />
+    <text x="716" y="53" fill="#f59e0b" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1">LAYER 03 : NOTIFICATION &amp; DESKTOP UI</text>
+
+    <!-- Windows Toast Notification -->
+    <rect x="716" y="80" width="298" height="65" rx="6" fill="#0b1120" stroke="#f59e0b" stroke-width="1"/>
+    <text x="730" y="104" fill="#f8fafc" font-size="13" font-weight="600">Windows 11 Toast 橫幅通知</text>
+    <text x="730" y="122" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">windows-toasts + WinRT PowerShell Fallback</text>
+    <text x="730" y="136" fill="#94a3b8" font-size="11">系統原生音效、單一 ID 替換避免通知轟炸</text>
+
+    <!-- 5-Button Break Dialog -->
+    <rect x="716" y="155" width="298" height="140" rx="6" fill="#0b1120" stroke="#0ea5e9" stroke-width="1.2"/>
+    <text x="730" y="178" fill="#38bdf8" font-size="13" font-weight="700">桌面強提醒置頂彈窗 (5 大處置按鈕)</text>
+    <text x="730" y="196" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">PySide6 BreakDialog (Qt.WindowStaysOnTopHint)</text>
+
+    <g transform="translate(730, 205)">
+      <rect x="0" y="0" width="130" height="20" rx="3" fill="#064e3b"/>
+      <text x="6" y="14" fill="#34d399" font-size="10" font-weight="600">1. 已完成休息 (重設)</text>
+
+      <rect x="140" y="0" width="130" height="20" rx="3" fill="#451a03"/>
+      <text x="146" y="14" fill="#fbbf24" font-size="10" font-weight="600">2. 稍後 5 分鐘 (貪睡)</text>
+
+      <rect x="0" y="26" width="130" height="20" rx="3" fill="#1e1b4b"/>
+      <text x="6" y="40" fill="#a5b4fc" font-size="10" font-weight="600">3. 我正在休息 (碼錶)</text>
+
+      <rect x="140" y="26" width="130" height="20" rx="3" fill="#1f2937"/>
+      <text x="146" y="40" fill="#cbd5e1" font-size="10" font-weight="600">4. 關閉 (保留待處置)</text>
+
+      <rect x="0" y="52" width="130" height="20" rx="3" fill="#1f2937"/>
+      <text x="6" y="66" fill="#cbd5e1" font-size="10" font-weight="600">5. 暫停提醒</text>
+    </g>
+  </g>
+
+  <!-- LAYER 4: STORAGE & PERSISTENCE LAYER -->
+  <g class="grid-node">
+    <rect x="700" y="330" width="330" height="260" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1" />
+    <rect x="700" y="330" width="330" height="36" rx="8" fill="#1e293b" />
+    <text x="716" y="353" fill="#10b981" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" letter-spacing="1">LAYER 04 : LOCAL STORAGE &amp; AUDIT</text>
+
+    <!-- Atomic JSON Settings -->
+    <rect x="716" y="380" width="298" height="85" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="730" y="404" fill="#f8fafc" font-size="13" font-weight="600">本機設定檔原子寫入 (Atomic JSON)</text>
+    <text x="730" y="422" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">config.json.tmp -&gt; os.replace()</text>
+    <text x="730" y="438" fill="#94a3b8" font-size="11">斷電與當機防損壞，儲存門檻、開機設定</text>
+    <text x="730" y="454" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">%APPDATA%\\Win11BreakReminder\\</text>
+
+    <!-- SQLite Database -->
+    <rect x="716" y="480" width="298" height="95" rx="6" fill="#0b1120" stroke="#10b981" stroke-width="1.2"/>
+    <text x="730" y="504" fill="#10b981" font-size="13" font-weight="700">歷史紀錄資料庫 (SQLite 3)</text>
+    <text x="730" y="522" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">history.db · WAL 模式</text>
+    <text x="730" y="538" fill="#94a3b8" font-size="11">daily_summary (每日累計/休息次數)</text>
+    <text x="730" y="554" fill="#94a3b8" font-size="11">events_log (長時間閒置/達標處置紀錄)</text>
+  </g>
+
+  <!-- CONNECTORS (HAIRLINES WITH ORTHOGONAL 90 DEGREE ELBOWS) -->
+  <!-- Layer 1 to Layer 2 -->
+  <path d="M 234 240 L 270 240 L 270 230 L 304 230" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 234 365 L 270 365 L 270 410 L 304 410" fill="none" stroke="#64748b" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow)"/>
+
+  <!-- Layer 2 to Layer 3 -->
+  <path d="M 644 535 L 675 535 L 675 220 L 698 220" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 644 535 L 675 535 L 675 110 L 714 110" fill="none" stroke="#f59e0b" stroke-width="1.2" marker-end="url(#arrow-amber)"/>
+
+  <!-- Layer 2 to Layer 4 -->
+  <path d="M 644 380 L 675 380 L 675 420 L 714 420" fill="none" stroke="#10b981" stroke-width="1.2" marker-end="url(#arrow-emerald)"/>
+  <path d="M 644 550 L 675 550 L 675 530 L 714 530" fill="none" stroke="#10b981" stroke-width="1.2" marker-end="url(#arrow-emerald)"/>
+
+  <!-- BADGES / LABELS -->
+  <rect x="242" y="218" width="55" height="16" rx="3" fill="#0c1829" stroke="#0284c7" stroke-width="0.8"/>
+  <text x="246" y="230" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="9">Delta T</text>
+
+  <rect x="652" y="300" width="40" height="16" rx="3" fill="#1c1917" stroke="#f59e0b" stroke-width="0.8"/>
+  <text x="656" y="312" fill="#f59e0b" font-family="JetBrains Mono, monospace" font-size="9">45m</text>
+</svg>`
+      },
+      {
+        title: "圖二：三段式閒置容錯狀態機 (11-State Machine Diagram)",
+        desc: "嚴格符合規格定義：0~5m 短暫閒置（看手機容錯，進度完全保留但零增加）、5~15m 一般閒置、>15m 長時間閒置與 45 分鐘達標狀態分支。",
+        svg: `<svg viewBox="0 0 1060 620" width="1060" height="620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="三段式閒置容錯狀態機轉移圖">
+  <defs>
+    <marker id="sm-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="sm-emerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
+    </marker>
+    <marker id="sm-rose" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f43f5e"/>
+    </marker>
+    <marker id="sm-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <!-- START NODE -->
+  <circle cx="60" cy="180" r="14" fill="#38bdf8" />
+  <circle cx="60" cy="180" r="8" fill="#090d16" />
+  <text x="35" y="215" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="11">開機啟動</text>
+
+  <!-- ACTIVE STATE -->
+  <g transform="translate(140, 130)">
+    <rect x="0" y="0" width="180" height="100" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5" />
+    <text x="16" y="28" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">ACTIVE</text>
+    <text x="16" y="46" fill="#f8fafc" font-size="12">使用者正常操作電腦</text>
+    <line x1="0" y1="56" x2="180" y2="56" stroke="#10b981" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="74" fill="#6ee7b7" font-family="JetBrains Mono, monospace" font-size="10">DO: 累計活動秒數</text>
+    <text x="16" y="90" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">IF idle &lt; 2s: cycle++</text>
+  </g>
+
+  <!-- SHORT IDLE STATE (PHONE FAULT TOLERANCE) -->
+  <g transform="translate(420, 130)">
+    <rect x="0" y="0" width="200" height="100" rx="8" fill="#451a03" stroke="#f59e0b" stroke-width="1.5" />
+    <text x="16" y="28" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">SHORT_IDLE</text>
+    <text x="16" y="46" fill="#f8fafc" font-size="12">短暫閒置 (0~5 分鐘)</text>
+    <line x1="0" y1="56" x2="200" y2="56" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="74" fill="#fbbf24" font-family="JetBrains Mono, monospace" font-size="10">★ 看手機 3 分鐘容錯</text>
+    <text x="16" y="90" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="10">進度凍結保留 / 不計活動</text>
+  </g>
+
+  <!-- INACTIVE STATE -->
+  <g transform="translate(710, 130)">
+    <rect x="0" y="0" width="180" height="100" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.2" />
+    <text x="16" y="28" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">INACTIVE</text>
+    <text x="16" y="46" fill="#f8fafc" font-size="12">一般閒置 (5~15 分鐘)</text>
+    <line x1="0" y1="56" x2="180" y2="56" stroke="#64748b" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="74" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">DO: 停止累計</text>
+    <text x="16" y="90" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">原有累計進度維持</text>
+  </g>
+
+  <!-- LONG IDLE STATE -->
+  <g transform="translate(710, 290)">
+    <rect x="0" y="0" width="180" height="90" rx="8" fill="#1e293b" stroke="#94a3b8" stroke-width="1.2" />
+    <text x="16" y="28" fill="#f1f5f9" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">LONG_IDLE</text>
+    <text x="16" y="46" fill="#f8fafc" font-size="12">長時間閒置 (&gt; 15 分鐘)</text>
+    <line x1="0" y1="56" x2="180" y2="56" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="74" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">DO: 記錄事件至 SQLite</text>
+  </g>
+
+  <!-- BREAK DUE STATE (GOAL 45m REACHED) -->
+  <g transform="translate(140, 340)">
+    <rect x="0" y="0" width="220" height="120" rx="8" fill="#881337" stroke="#f43f5e" stroke-width="1.8" />
+    <text x="16" y="30" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="15" font-weight="700">BREAK_DUE</text>
+    <text x="16" y="50" fill="#ffffff" font-size="13" font-weight="600">累計達 45 分鐘！提醒休息</text>
+    <line x1="0" y1="62" x2="220" y2="62" stroke="#f43f5e" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="80" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="10">DO: 發送 Toast + 桌面強彈窗</text>
+    <text x="16" y="96" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="10">DO: 鎖定碼錶，等待處置</text>
+    <text x="16" y="112" fill="#fda4af" font-family="JetBrains Mono, monospace" font-size="10">產生單一提醒 UUID</text>
+  </g>
+
+  <!-- BREAK PAUSED STATE -->
+  <g transform="translate(430, 360)">
+    <rect x="0" y="0" width="180" height="90" rx="8" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.5" />
+    <text x="16" y="28" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">BREAK_PAUSED</text>
+    <text x="16" y="46" fill="#f8fafc" font-size="12">我正在休息 (碼錶計時)</text>
+    <line x1="0" y1="56" x2="180" y2="56" stroke="#818cf8" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <text x="16" y="74" fill="#a5b4fc" font-family="JetBrains Mono, monospace" font-size="10">累積休息達標後重設</text>
+  </g>
+
+  <!-- SYSTEM EVENTS: LOCKED & SUSPENDED -->
+  <g transform="translate(140, 500)">
+    <rect x="0" y="0" width="140" height="70" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="14" y="26" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">LOCKED</text>
+    <text x="14" y="44" fill="#94a3b8" font-size="11">螢幕鎖定 (Win+L)</text>
+    <text x="14" y="60" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">零累計 / 凍結時鐘</text>
+  </g>
+
+  <g transform="translate(320, 500)">
+    <rect x="0" y="0" width="140" height="70" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="14" y="26" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">SUSPENDED</text>
+    <text x="14" y="44" fill="#94a3b8" font-size="11">系統睡眠 / 休眠</text>
+    <text x="14" y="60" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="9">零累計 / 時鐘停擺</text>
+  </g>
+
+  <g transform="translate(500, 500)">
+    <rect x="0" y="0" width="140" height="70" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+    <text x="14" y="26" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">RESUMING</text>
+    <text x="14" y="44" fill="#f8fafc" font-size="11">自鎖定/睡眠喚醒</text>
+    <text x="14" y="60" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="9">等待實體輸入活動</text>
+  </g>
+
+  <!-- TRANSITION CONNECTORS -->
+  <!-- Start to Active -->
+  <path d="M 74 180 L 138 180" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#sm-arrow)"/>
+
+  <!-- Active -> Short Idle (No input > 2s) -->
+  <path d="M 320 160 L 418 160" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#sm-amber)"/>
+  <text x="330" y="152" fill="#f59e0b" font-family="JetBrains Mono, monospace" font-size="10">閒置 &gt; 2s</text>
+
+  <!-- Short Idle -> Active (Input resumes) -->
+  <path d="M 420 190 L 322 190" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#sm-emerald)"/>
+  <text x="335" y="206" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">重新操作(接續)</text>
+
+  <!-- Short Idle -> Inactive (Idle >= 5m) -->
+  <path d="M 620 170 L 708 170" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#sm-arrow)"/>
+  <text x="635" y="162" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">閒置 ≥ 5 分鐘</text>
+
+  <!-- Inactive -> Long Idle (Idle >= 15m) -->
+  <path d="M 800 230 L 800 288" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#sm-arrow)"/>
+  <text x="806" y="260" fill="#94a3b8" font-family="JetBrains Mono, monospace" font-size="10">閒置 ≥ 15 分鐘</text>
+
+  <!-- Inactive/Long Idle -> Active (Resume input) -->
+  <path d="M 710 335 L 260 335 L 260 232" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4,4" marker-end="url(#sm-emerald)"/>
+  <text x="470" y="325" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">重新操作：重新錨定參考點，接續原有累計</text>
+
+  <!-- Active -> Break Due (45m reached) -->
+  <path d="M 210 230 L 210 338" fill="none" stroke="#f43f5e" stroke-width="1.8" marker-end="url(#sm-rose)"/>
+  <text x="216" y="285" fill="#f43f5e" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">累計達 45 分鐘</text>
+
+  <!-- Break Due -> Active (Done break) -->
+  <path d="M 140 390 L 100 390 L 100 160 L 138 160" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#sm-emerald)"/>
+  <text x="20" y="270" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">「已完成休息」</text>
+  <text x="20" y="285" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="9">累計歸零重新計時</text>
+
+  <!-- Break Due -> Break Paused -->
+  <path d="M 360 400 L 428 400" fill="none" stroke="#818cf8" stroke-width="1.2" marker-end="url(#sm-arrow)"/>
+  <text x="368" y="392" fill="#818cf8" font-family="JetBrains Mono, monospace" font-size="10">「我正在休息」</text>
+
+  <!-- Break Paused -> Active -->
+  <path d="M 520 360 L 520 250 L 322 210" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#sm-emerald)"/>
+  <text x="440" y="270" fill="#a5b4fc" font-family="JetBrains Mono, monospace" font-size="10">結束休息 (重設本輪)</text>
+</svg>`
+      },
+      {
+        title: "圖三：45 分鐘健康休息提醒觸發與 5 大處置決策流 (Decision Tree)",
+        desc: "當本輪有效時間達到 45 分鐘時，系統凍結計時並彈出置頂對話框。嚴格對應五顆按鈕的業務邏輯、計時重設與延後排程機制。",
+        svg: `<svg viewBox="0 0 1060 620" width="1060" height="620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="45分鐘提醒與 5 大處置決策流程圖">
+  <defs>
+    <marker id="dec-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="dec-emerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <!-- TRIGGER ENTRY -->
+  <rect x="40" y="40" width="260" height="70" rx="8" fill="#881337" stroke="#f43f5e" stroke-width="1.5" />
+  <text x="56" y="66" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="14" font-weight="700">45 MIN THRESHOLD</text>
+  <text x="56" y="86" fill="#ffffff" font-size="12">本輪推定活動時間累積滿 45 分鐘</text>
+  <text x="56" y="100" fill="#fecdd3" font-family="JetBrains Mono, monospace" font-size="10">cycle_active_seconds &gt;= 2700</text>
+
+  <!-- SYSTEM ACTION: FREEZE & NOTIFY -->
+  <path d="M 300 75 L 368 75" fill="none" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#dec-arrow)"/>
+
+  <rect x="370" y="40" width="280" height="70" rx="8" fill="#111827" stroke="#0ea5e9" stroke-width="1.2" />
+  <text x="386" y="64" fill="#38bdf8" font-size="13" font-weight="700">產生單一提醒 UUID 並觸發提醒</text>
+  <text x="386" y="82" fill="#f8fafc" font-size="11">1. Windows 11 Toast 橫幅與音效</text>
+  <text x="386" y="98" fill="#f8fafc" font-size="11">2. 桌面強提醒置頂彈窗 (BreakDialog)</text>
+
+  <!-- DECISION JUNCTION -->
+  <path d="M 650 75 L 720 75" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#dec-arrow)"/>
+
+  <polygon points="770,45 840,75 770,105 700,75" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="735" y="78" fill="#f8fafc" font-size="11" font-weight="700">使用者點選</text>
+
+  <!-- 5 ACTION BRANCHES -->
+
+  <!-- BRANCH 1: 已完成健康休息 -->
+  <g class="grid-node">
+    <path d="M 770 105 L 770 150 L 160 150 L 160 188" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#dec-emerald)"/>
+    <rect x="60" y="190" width="200" height="150" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+    <rect x="60" y="190" width="200" height="26" rx="8" fill="#065f46"/>
+    <text x="72" y="208" fill="#a7f3d0" font-size="12" font-weight="700">按鈕 1：我已完成健康休息</text>
+    <text x="72" y="234" fill="#ffffff" font-size="11" font-weight="600">✓ 執行項目：</text>
+    <text x="72" y="254" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">• 本輪活動歸零 (00:00:00)</text>
+    <text x="72" y="272" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">• 今日完成次數 +1</text>
+    <text x="72" y="290" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">• 寫入 SQLite 歷史資料庫</text>
+    <text x="72" y="308" fill="#a7f3d0" font-family="JetBrains Mono, monospace" font-size="10">• 關閉彈窗，開啟新週期</text>
+    <text x="72" y="326" fill="#6ee7b7" font-size="11">狀態：ACTIVE</text>
+  </g>
+
+  <!-- BRANCH 2: 稍後 5 分鐘提醒 -->
+  <g class="grid-node">
+    <path d="M 770 105 L 770 150 L 370 150 L 370 188" fill="none" stroke="#f59e0b" stroke-width="1.2" marker-end="url(#dec-arrow)"/>
+    <rect x="270" y="190" width="200" height="150" rx="8" fill="#451a03" stroke="#f59e0b" stroke-width="1.2"/>
+    <rect x="270" y="190" width="200" height="26" rx="8" fill="#78350f"/>
+    <text x="282" y="208" fill="#fde68a" font-size="12" font-weight="700">按鈕 2：稍後 5 分鐘提醒</text>
+    <text x="282" y="234" fill="#ffffff" font-size="11" font-weight="600">✓ 執行項目：</text>
+    <text x="282" y="254" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="10">• 排程 snooze_until = now+300s</text>
+    <text x="282" y="272" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="10">• 保留本輪 45 分鐘滿額進度</text>
+    <text x="282" y="290" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="10">• 關閉彈窗</text>
+    <text x="282" y="308" fill="#fde68a" font-family="JetBrains Mono, monospace" font-size="10">• 5 分鐘後重新觸發提醒</text>
+    <text x="282" y="326" fill="#fbbf24" font-size="11">狀態：SNOOZED (保留待處置)</text>
+  </g>
+
+  <!-- BRANCH 3: 我正在休息 -->
+  <g class="grid-node">
+    <path d="M 770 105 L 770 188" fill="none" stroke="#818cf8" stroke-width="1.2" marker-end="url(#dec-arrow)"/>
+    <rect x="480" y="190" width="200" height="150" rx="8" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.2"/>
+    <rect x="480" y="190" width="200" height="26" rx="8" fill="#312e81"/>
+    <text x="492" y="208" fill="#c7d2fe" font-size="12" font-weight="700">按鈕 3：我正在休息</text>
+    <text x="492" y="234" fill="#ffffff" font-size="11" font-weight="600">✓ 執行項目：</text>
+    <text x="492" y="254" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="10">• 進入碼錶計時模式</text>
+    <text x="492" y="272" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="10">• 記錄休息開始時間</text>
+    <text x="492" y="290" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="10">• 提供「結束休息」即時重設</text>
+    <text x="492" y="308" fill="#c7d2fe" font-family="JetBrains Mono, monospace" font-size="10">• 滿 5 分鐘自動判定為完成</text>
+    <text x="492" y="326" fill="#a5b4fc" font-size="11">狀態：BREAK_PAUSED</text>
+  </g>
+
+  <!-- BRANCH 4: 關閉視窗 (保留待處置) -->
+  <g class="grid-node">
+    <path d="M 770 105 L 770 150 L 790 150 L 790 188" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#dec-arrow)"/>
+    <rect x="690" y="190" width="160" height="150" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <rect x="690" y="190" width="160" height="26" rx="8" fill="#334155"/>
+    <text x="700" y="208" fill="#f8fafc" font-size="12" font-weight="700">按鈕 4：關閉視窗</text>
+    <text x="700" y="234" fill="#ffffff" font-size="11" font-weight="600">✓ 執行項目：</text>
+    <text x="700" y="254" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 關閉置頂彈窗</text>
+    <text x="700" y="272" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 維持紅燈待處置狀態</text>
+    <text x="700" y="290" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 碼錶停留在 45m 滿額</text>
+    <text x="700" y="308" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 托盤常駐提醒圖示</text>
+    <text x="700" y="326" fill="#94a3b8" font-size="11">狀態：BREAK_DUE</text>
+  </g>
+
+  <!-- BRANCH 5: 暫停提醒 -->
+  <g class="grid-node">
+    <path d="M 770 105 L 770 150 L 950 150 L 950 188" fill="none" stroke="#64748b" stroke-width="1.2" marker-end="url(#dec-arrow)"/>
+    <rect x="860" y="190" width="160" height="150" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.2"/>
+    <rect x="860" y="190" width="160" height="26" rx="8" fill="#334155"/>
+    <text x="870" y="208" fill="#f8fafc" font-size="12" font-weight="700">按鈕 5：暫停提醒</text>
+    <text x="870" y="234" fill="#ffffff" font-size="11" font-weight="600">✓ 執行項目：</text>
+    <text x="870" y="254" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 暫停整個計時引擎</text>
+    <text x="870" y="272" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 累積時間安全封存</text>
+    <text x="870" y="290" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 直至手動點擊恢復</text>
+    <text x="870" y="308" fill="#cbd5e1" font-family="JetBrains Mono, monospace" font-size="10">• 會議/簡報專用</text>
+    <text x="870" y="326" fill="#94a3b8" font-size="11">狀態：PAUSED</text>
+  </g>
+
+  <!-- SUMMARY STRIP AT BOTTOM -->
+  <rect x="60" y="380" width="960" height="190" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1"/>
+  <rect x="60" y="380" width="960" height="32" rx="8" fill="#111827"/>
+  <text x="76" y="402" fill="#38bdf8" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">SAFETY &amp; USER EXPERIENCE GUARANTEE</text>
+
+  <g transform="translate(80, 430)">
+    <circle cx="10" cy="10" r="4" fill="#10b981"/>
+    <text x="24" y="14" fill="#f8fafc" font-size="12" font-weight="600">1. 防轟炸機制 (Single ID Toast)</text>
+    <text x="24" y="32" fill="#94a3b8" font-size="11">每次 45 分鐘提醒使用固定 Tag/UUID，在 Windows 控制中心只會覆蓋更新，不產生多筆重複推播。</text>
+
+    <circle cx="10" cy="60" r="4" fill="#38bdf8"/>
+    <text x="24" y="64" fill="#f8fafc" font-size="12" font-weight="600">2. 不強制鎖定或中斷工作 (Non-Destructive)</text>
+    <text x="24" y="82" fill="#94a3b8" font-size="11">彈窗提供明確的休息指引與 5 種自主處置路徑，不強制倒數或封鎖輸入，兼顧健康與工作專注。</text>
+
+    <circle cx="10" cy="110" r="4" fill="#f59e0b"/>
+    <text x="24" y="114" fill="#f8fafc" font-size="12" font-weight="600">3. 斷電防損毀 (Atomic Persistence)</text>
+    <text x="24" y="132" fill="#94a3b8" font-size="11">任何處置動作皆於背景以原子操作同步至 SQLite 歷史資料庫與 JSON 設定檔。</text>
+  </g>
+</svg>`
+      },
+      {
+        title: "圖四：Windows 11 會話事件與電源生命週期 (Power & Session Lifecycle)",
+        desc: "登入開機啟動 (HKCU Run)、單一實體互斥鎖 (Named Mutex)、隱藏視窗監聽 Win32 廣播（鎖定/睡眠/休眠/喚醒）之全時安全狀態流。",
+        svg: `<svg viewBox="0 0 1060 620" width="1060" height="620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Windows 11 會話與電源生命週期圖">
+  <defs>
+    <marker id="pw-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="pw-emerald" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <!-- TIMELINE / SWIMLANES -->
+  <!-- Phase 1: Boot & Initialization -->
+  <g class="grid-node">
+    <rect x="40" y="40" width="290" height="540" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1"/>
+    <rect x="40" y="40" width="290" height="36" rx="8" fill="#1e293b"/>
+    <text x="56" y="63" fill="#38bdf8" font-family="-apple-system, sans-serif" font-size="12" font-weight="700">PHASE 01 : 登入與單一實體檢查</text>
+
+    <!-- HKCU Run Registry -->
+    <rect x="56" y="90" width="258" height="80" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="70" y="114" fill="#f8fafc" font-size="13" font-weight="600">Windows 使用者登入開機</text>
+    <text x="70" y="132" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">HKCU\...\Run · 無需管理員權限</text>
+    <text x="70" y="150" fill="#94a3b8" font-size="11">帶入 --minimized 參數安靜啟動</text>
+
+    <!-- Named Mutex Check -->
+    <rect x="56" y="190" width="258" height="110" rx="6" fill="#0b1120" stroke="#0ea5e9" stroke-width="1.2"/>
+    <text x="70" y="214" fill="#38bdf8" font-size="13" font-weight="700">Named Mutex 互斥鎖檢查</text>
+    <text x="70" y="232" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">CreateMutexW(Local\Win11...)</text>
+    <text x="70" y="250" fill="#94a3b8" font-size="11">IF ERROR_ALREADY_EXISTS:</text>
+    <text x="70" y="268" fill="#f43f5e" font-size="11">喚醒現有視窗至前景，立即安全退出</text>
+    <text x="70" y="286" fill="#10b981" font-size="11">ELSE: 成功取得單一實體控制權</text>
+
+    <!-- System Tray Setup -->
+    <rect x="56" y="320" width="258" height="85" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="70" y="344" fill="#f8fafc" font-size="13" font-weight="600">建立系統匣圖示 (System Tray)</text>
+    <text x="70" y="362" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">QSystemTrayIcon · 綠/黃/紅動態圖示</text>
+    <text x="70" y="378" fill="#94a3b8" font-size="11">常駐背景、雙擊開啟儀表板、右鍵選單</text>
+
+    <!-- Load Local DB -->
+    <rect x="56" y="425" width="258" height="85" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="70" y="449" fill="#f8fafc" font-size="13" font-weight="600">載入當日已累計進度</text>
+    <text x="70" y="467" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">SQLite: SELECT today_active_seconds</text>
+    <text x="70" y="485" fill="#94a3b8" font-size="11">以當日 00:00 為分界自動跨日重置</text>
+  </g>
+
+  <!-- Phase 2: Runtime System Messages Window -->
+  <g class="grid-node">
+    <rect x="360" y="40" width="340" height="540" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1"/>
+    <rect x="360" y="40" width="340" height="36" rx="8" fill="#1e293b"/>
+    <text x="376" y="63" fill="#f59e0b" font-family="-apple-system, sans-serif" font-size="12" font-weight="700">PHASE 02 : 隱藏視窗監聽 Win32 系統廣播</text>
+
+    <!-- Hidden Message Window -->
+    <rect x="376" y="90" width="308" height="95" rx="6" fill="#0b1120" stroke="#f59e0b" stroke-width="1.2"/>
+    <text x="390" y="114" fill="#f59e0b" font-size="13" font-weight="700">Win32 專用隱藏訊息視窗</text>
+    <text x="390" y="132" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">CreateWindowExW(..., "Win11EventHook")</text>
+    <text x="390" y="150" fill="#94a3b8" font-size="11">WTSRegisterSessionNotification(NOTIFY_ALL)</text>
+    <text x="390" y="166" fill="#94a3b8" font-size="11">接收最高優先級系統電源與登入變更</text>
+
+    <!-- WM_WTSSESSION_CHANGE -->
+    <rect x="376" y="205" width="308" height="150" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="390" y="228" fill="#f8fafc" font-size="13" font-weight="600">WM_WTSSESSION_CHANGE 工作階段</text>
+    
+    <g transform="translate(390, 240)">
+      <rect x="0" y="0" width="280" height="42" rx="4" fill="#1e293b"/>
+      <text x="10" y="18" fill="#f43f5e" font-family="JetBrains Mono, monospace" font-size="10">WTS_SESSION_LOCK (Win+L 鎖定)</text>
+      <text x="10" y="32" fill="#94a3b8" font-size="10">結算有效時間 -&gt; 凍結時鐘 -&gt; 進入 LOCKED</text>
+
+      <rect x="0" y="50" width="280" height="42" rx="4" fill="#1e293b"/>
+      <text x="10" y="68" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">WTS_SESSION_UNLOCK (使用者解鎖)</text>
+      <text x="10" y="82" fill="#94a3b8" font-size="10">進入 RESUMING -&gt; 等待實體輸入 -&gt; ACTIVE</text>
+    </g>
+
+    <!-- WM_POWERBROADCAST -->
+    <rect x="376" y="375" width="308" height="150" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="390" y="398" fill="#f8fafc" font-size="13" font-weight="600">WM_POWERBROADCAST 電源事件</text>
+
+    <g transform="translate(390, 410)">
+      <rect x="0" y="0" width="280" height="42" rx="4" fill="#1e293b"/>
+      <text x="10" y="18" fill="#f43f5e" font-family="JetBrains Mono, monospace" font-size="10">PBT_APMSUSPEND (進入睡眠/休眠)</text>
+      <text x="10" y="32" fill="#94a3b8" font-size="10">保存未寫入秒數 -&gt; 凍結時鐘 -&gt; SUSPENDED</text>
+
+      <rect x="0" y="50" width="280" height="42" rx="4" fill="#1e293b"/>
+      <text x="10" y="68" fill="#10b981" font-family="JetBrains Mono, monospace" font-size="10">PBT_APMRESUME... (睡眠甦醒)</text>
+      <text x="10" y="82" fill="#94a3b8" font-size="10">重新校正基準時間，排除睡眠期間流逝秒數</text>
+    </g>
+  </g>
+
+  <!-- Phase 3: Safe Teardown & Integrity -->
+  <g class="grid-node">
+    <rect x="730" y="40" width="290" height="540" rx="8" fill="#111827" stroke="#1e293b" stroke-width="1"/>
+    <rect x="730" y="40" width="290" height="36" rx="8" fill="#1e293b"/>
+    <text x="746" y="63" fill="#10b981" font-family="-apple-system, sans-serif" font-size="12" font-weight="700">PHASE 03 : 安全關機與資料完整性</text>
+
+    <!-- OS Shutdown Hook -->
+    <rect x="746" y="90" width="258" height="95" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="760" y="114" fill="#f8fafc" font-size="13" font-weight="600">WM_QUERYENDSESSION 關機攔截</text>
+    <text x="760" y="132" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">系統重開機 / 登出事件</text>
+    <text x="760" y="150" fill="#94a3b8" font-size="11">立即觸發 safe_shutdown() 迴圈</text>
+    <text x="760" y="166" fill="#10b981" font-size="11">回傳 TRUE 允許系統安全關機</text>
+
+    <!-- Atomic Flush -->
+    <rect x="746" y="205" width="258" height="110" rx="6" fill="#0b1120" stroke="#10b981" stroke-width="1.2"/>
+    <text x="760" y="228" fill="#10b981" font-size="13" font-weight="700">最後狀態強制刷寫 (Flush)</text>
+    <text x="760" y="246" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">db.commit() + config.save()</text>
+    <text x="760" y="264" fill="#94a3b8" font-size="11">將當前有效累計秒數完整寫入</text>
+    <text x="760" y="280" fill="#94a3b8" font-size="11">釋放 Named Mutex 句柄</text>
+    <text x="760" y="296" fill="#94a3b8" font-size="11">關閉工作階段通知勾點</text>
+
+    <!-- Single Instance Release -->
+    <rect x="746" y="335" width="258" height="85" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="760" y="358" fill="#f8fafc" font-size="13" font-weight="600">釋放作業系統資源</text>
+    <text x="760" y="376" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">CloseHandle(hMutex)</text>
+    <text x="760" y="394" fill="#94a3b8" font-size="11">銷毀托盤圖示與隱藏視窗</text>
+
+    <!-- Graceful Exit -->
+    <rect x="746" y="440" width="258" height="95" rx="6" fill="#0b1120" stroke="#334155" stroke-width="1"/>
+    <text x="760" y="464" fill="#f8fafc" font-size="13" font-weight="600">乾淨終止 (Exit Code 0)</text>
+    <text x="760" y="482" fill="#64748b" font-family="JetBrains Mono, monospace" font-size="10">QApplication::quit()</text>
+    <text x="760" y="500" fill="#94a3b8" font-size="11">無懸掛執行緒、無孤兒處理序</text>
+  </g>
+
+  <!-- INTER-PHASE CONNECTORS -->
+  <path d="M 314 240 L 358 240" fill="none" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#pw-arrow)"/>
+  <path d="M 684 270 L 728 270" fill="none" stroke="#10b981" stroke-width="1.5" marker-end="url(#pw-emerald)"/>
+</svg>`
+      }
+    ];
+
+    let currentIdx = 0;
+    let currentZoom = 1;
+
+    function renderCurrentDiagram() {
+      const diag = DIAGRAMS[currentIdx];
+      document.getElementById('diag-title').textContent = diag.title;
+      document.getElementById('diag-desc').textContent = diag.desc;
+      document.getElementById('svg-container').innerHTML = diag.svg;
+      
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      tabBtns.forEach((btn, idx) => {
+        if (idx === currentIdx) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      zoomReset();
+    }
+
+    function switchDiagram(idx) {
+      currentIdx = idx;
+      renderCurrentDiagram();
+    }
+
+    function zoomIn() {
+      currentZoom = Math.min(2.5, currentZoom + 0.15);
+      applyZoom();
+    }
+
+    function zoomOut() {
+      currentZoom = Math.max(0.5, currentZoom - 0.15);
+      applyZoom();
+    }
+
+    function zoomReset() {
+      currentZoom = 1;
+      applyZoom();
+    }
+
+    function applyZoom() {
+      const wrapper = document.getElementById('svg-wrapper');
+      wrapper.style.transform = `scale(${currentZoom})`;
+      document.getElementById('zoom-level').textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+
+    function copySvgCode() {
+      const svg = DIAGRAMS[currentIdx].svg;
+      navigator.clipboard.writeText(svg).then(() => {
+        showToast();
+      }).catch(err => {
+        console.error('Copy failed', err);
+      });
+    }
+
+    function downloadCurrentSvg() {
+      const diag = DIAGRAMS[currentIdx];
+      const blob = new Blob([diag.svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `diagram_design_${currentIdx + 1}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.contains('dark');
+      if (isDark) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        document.getElementById('theme-icon').textContent = '🌙';
+        document.getElementById('theme-btn').childNodes[2].textContent = ' 深色模式';
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        document.getElementById('theme-icon').textContent = '☀️';
+        document.getElementById('theme-btn').childNodes[2].textContent = ' 明亮模式';
+      }
+    }
+
+    function showToast() {
+      const toast = document.getElementById('copy-toast');
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2500);
+    }
+
+    // 初始化渲染第一張
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCurrentDiagram();
+    });
+  </script>
+</body>
+</html>
